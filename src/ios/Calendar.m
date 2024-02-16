@@ -573,6 +573,20 @@
                                     thisCalendar.title, @"name",
                                     type, @"type",
                                     nil];
+
+      // Add color if available
+      if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"13.0") && thisCalendar.CGColor != nil) {
+        // Convert CGColor to Hex
+        const CGFloat *components = CGColorGetComponents(thisCalendar.CGColor);
+        size_t count = CGColorGetNumberOfComponents(thisCalendar.CGColor);
+        NSMutableString *hex = [NSMutableString stringWithString:@"#"];
+        for (size_t i = 0; i < count - 1; i++) {
+          [hex appendFormat:@"%02lX", (unsigned long)(components[i] * 255.0)];
+        }
+        [entry setObject:hex forKey:@"color"];
+      }
+
+
       [finalResults addObject:entry];
     }
 
@@ -581,34 +595,66 @@
   }];
 }
 
-- (void) listEventsInRange:(CDVInvokedUrlCommand*)command {
+- (void)listEventsInRange:(CDVInvokedUrlCommand*)command {
   NSDictionary* options = [command.arguments objectAtIndex:0];
   NSNumber* startTime  = [options objectForKey:@"startTime"];
   NSNumber* endTime    = [options objectForKey:@"endTime"];
 
   [self.commandDelegate runInBackground: ^{
-      NSLog(@"listEventsInRange invoked");
-      NSTimeInterval _startInterval = [startTime doubleValue] / 1000; // strip millis
+      NSTimeInterval _startInterval = [startTime doubleValue] / 1000; // convertir milisegundos a segundos
       NSDate *startDate = [NSDate dateWithTimeIntervalSince1970:_startInterval];
 
-      NSTimeInterval _endInterval = [endTime doubleValue] / 1000; // strip millis
+      NSTimeInterval _endInterval = [endTime doubleValue] / 1000; // convertir milisegundos a segundos
       NSDate *endDate = [NSDate dateWithTimeIntervalSince1970:_endInterval];
 
-      NSLog(@"startDate: %@", startDate);
-      NSLog(@"endDate: %@", endDate);
-
       CDVPluginResult *pluginResult = nil;
-
       NSArray *calendarArray = nil;
       NSPredicate *fetchCalendarEvents = [eventStore predicateForEventsWithStartDate:startDate endDate:endDate calendars:calendarArray];
       NSArray *matchingEvents = [eventStore eventsMatchingPredicate:fetchCalendarEvents];
-      NSMutableArray * eventsDataArray = [self eventsToDataArray:matchingEvents];
 
-      pluginResult = [CDVPluginResult resultWithStatus: CDVCommandStatus_OK messageAsArray:eventsDataArray];
+      NSMutableArray *eventsDataArray = [[NSMutableArray alloc] init];
+      for (EKEvent *event in matchingEvents) {
+          NSMutableDictionary *eventData = [[NSMutableDictionary alloc] init];
+          if (event.title != nil) {
+              [eventData setObject:event.title forKey:@"title"];
+          }
+          [eventData setObject:@(event.startDate.timeIntervalSince1970 * 1000) forKey:@"startTime"];
+          [eventData setObject:@(event.endDate.timeIntervalSince1970 * 1000) forKey:@"endTime"];
+          if (event.calendar.calendarIdentifier != nil) {
+              [eventData setObject:event.calendar.calendarIdentifier forKey:@"calendarId"];
+          }
+          if (event.location != nil) {
+              [eventData setObject:event.location forKey:@"location"];
+          }
+          if (event.notes != nil) {
+              [eventData setObject:event.notes forKey:@"notes"];
+          }
+          if (event.URL != nil) {
+              [eventData setObject:event.URL.absoluteString forKey:@"url"];
+          }
+          [eventData setObject:@(event.allDay) forKey:@"allDay"];
+          [eventData setObject:@(event.availability) forKey:@"availability"];
+          [eventData setObject:@(event.status) forKey:@"status"];
+          [eventData setObject:@(event.alarms.count) forKey:@"alarmsCount"];
+          [eventData setObject:@(event.attendees.count) forKey:@"attendeesCount"];
+          [eventData setObject:@(event.hasRecurrenceRules) forKey:@"hasRecurrenceRules"];
+          [eventData setObject:@(event.hasAlarms) forKey:@"hasAlarms"];
+          [eventData setObject:@(event.hasNotes) forKey:@"hasNotes"];
+          [eventData setObject:@(event.hasAttendees) forKey:@"hasAttendees"];
+          if (event.calendar.title != nil) {
+              [eventData setObject:event.calendar.title forKey:@"calendarName"];
+          }
+
+          [eventsDataArray addObject:eventData];
+      }
+
+      pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:eventsDataArray];
 
       [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-  }];  
+  }];
 }
+
+
 
 - (void)createEventWithOptions:(CDVInvokedUrlCommand*)command {
   NSDictionary* options = [command.arguments objectAtIndex:0];
@@ -825,7 +871,7 @@
     self.interactiveCallbackId = command.callbackId;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-    
+
         //Fix ios 15.1 -- Modifications to the layout engine must not be performed from a background thread after it has been accessed from the main thread
         EKEventEditViewController* controller = [[EKEventEditViewController alloc] init];
         controller.event = myEvent;
