@@ -883,6 +883,44 @@
   }];
 }
 
+- (void) modifyEventInteractively:(CDVInvokedUrlCommand*)command {
+  NSDictionary* options = [command.arguments objectAtIndex:0];
+  NSString* calEventID = [options objectForKey:@"id"];
+  NSNumber* fromTime = [options objectForKey:@"fromTime"];
+
+  EKEvent* firstEvent = (EKEvent *)[eventStore eventWithIdentifier:calEventID];
+  if (firstEvent == nil) {
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not find event"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    return;
+  }
+
+  EKEvent* instance;
+  if (fromTime != nil && fromTime != (id)NSNull.null) {
+    NSDate* fromDate = [NSDate dateWithTimeIntervalSince1970:(fromTime.doubleValue / 1000)]; // strip millis
+    NSArray<EKEvent*>* toModify = [eventStore eventsMatchingPredicate:[eventStore predicateForEventsWithStartDate:fromDate endDate:NSDate.distantFuture calendars:@[firstEvent.calendar]]];
+    if (toModify.count < 1) {
+      CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not find event"];
+      [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+      return;
+    }
+    NSArray<EKEvent*>* toModifySorted = [toModify sortedArrayUsingSelector:@selector(compareStartDateWithEvent:)];
+    instance = toModifySorted.firstObject;
+  } else {
+    instance = firstEvent;
+  }
+
+  self.interactiveCallbackId = command.callbackId;
+
+  dispatch_async(dispatch_get_main_queue(), ^{
+    EKEventEditViewController* controller = [[EKEventEditViewController alloc] init];
+    controller.event = instance;
+    controller.eventStore = self.eventStore;
+    controller.editViewDelegate = self;
+    [self.viewController presentViewController:controller animated:YES completion:nil];
+  });
+}
+
 - (void) deleteEventFromNamedCalendar:(CDVInvokedUrlCommand*)command {
   NSDictionary* options = [command.arguments objectAtIndex:0];
   NSString* calendarName = [options objectForKey:@"calendarName"];

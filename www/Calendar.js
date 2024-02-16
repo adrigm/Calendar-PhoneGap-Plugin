@@ -153,6 +153,34 @@ Calendar.prototype.createEventInteractivelyWithOptions = function (title, locati
   }])
 };
 
+Calendar.prototype.modifyEventInteractively = function (options, successCallback, errorCallback) {
+  // Asegúrate de que el ID del evento y las fechas opcionales están correctamente formateadas
+  if (!options || !options.id) {
+    errorCallback("Se requiere proporcionar el ID del evento.");
+    return;
+  }
+
+  var params = {
+    "id": options.id,
+    "title": options.title || null,
+    "location": options.location || null,
+    "notes": options.notes || null,
+    "startTime": options.startTime instanceof Date ? options.startTime.getTime() : null,
+    "endTime": options.endTime instanceof Date ? options.endTime.getTime() : null,
+    "options": {
+      "firstReminderMinutes": options.firstReminderMinutes || null,
+      "secondReminderMinutes": options.secondReminderMinutes || null,
+      "recurrence": options.recurrence || null,
+      "recurrenceEndTime": options.recurrenceEndTime instanceof Date ? options.recurrenceEndTime.getTime() : null,
+      "calendarName": options.calendarName || null,
+      "url": options.url || null
+    }
+  };
+
+  cordova.exec(successCallback, errorCallback, "Calendar", "modifyEventInteractively", [params]);
+};
+
+
 Calendar.prototype.findEventWithOptions = function (title, location, notes, startDate, endDate, options, successCallback, errorCallback) {
   // merge passed options with defaults
   var mergedOptions = Calendar.prototype.getCalendarOptions();
