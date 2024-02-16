@@ -3,7 +3,7 @@
     xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-calendar"
-    version="5.1.6">
+    version="5.2.0">
 
   <name>Calendar</name>
 
@@ -43,6 +43,7 @@
     <config-file target="*-Info.plist" parent="CFBundleLocalizations">
       <array>
         <string>en</string>
+        <string>es</string>
         <string>de</string>
         <string>nl</string>
         <string>fr</string>
