@@ -618,6 +618,7 @@
           if (event.title != nil) {
               [eventData setObject:event.title forKey:@"title"];
           }
+          [eventData setObject:event.eventIdentifier forKey:@"id"];
           [eventData setObject:@(event.startDate.timeIntervalSince1970 * 1000) forKey:@"startTime"];
           [eventData setObject:@(event.endDate.timeIntervalSince1970 * 1000) forKey:@"endTime"];
           if (event.calendar.calendarIdentifier != nil) {
