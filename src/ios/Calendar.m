@@ -570,6 +570,7 @@
       NSString *type = [[NSArray arrayWithObjects:@"Local", @"CalDAV", @"Exchange", @"Subscription", @"Birthday", @"Mail", nil] objectAtIndex:thisCalendar.type];
       NSMutableDictionary *entry = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
                                     thisCalendar.calendarIdentifier, @"id",
+                                    thisCalendar.source.title, @"source",
                                     thisCalendar.title, @"name",
                                     type, @"type",
                                     nil];
