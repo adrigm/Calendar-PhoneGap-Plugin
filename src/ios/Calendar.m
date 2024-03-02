@@ -435,6 +435,20 @@
   return nil;
 }
 
+- (EKCalendar*) findEKCalendarById: (NSString *)calendarId {
+  NSArray<EKCalendar *> *calendars = [self.eventStore calendarsForEntityType:EKEntityTypeEvent];
+  if (calendars != nil && calendars.count > 0) {
+    for (EKCalendar *thisCalendar in calendars) {
+      NSLog(@"Calendar: %@", thisCalendar.title);
+      if ([thisCalendar.calendarIdentifier isEqualToString:calendarId]) {
+        return thisCalendar;
+      }
+    }
+  }
+  NSLog(@"No match found for calendar with ID: %@", calendarId);
+  return nil;
+}
+
 - (EKSource*) findEKSource {
   // if iCloud is on, it hides the local calendars, so check for iCloud first
   for (EKSource *source in self.eventStore.sources) {
@@ -1143,10 +1157,12 @@
 
 - (void) deleteCalendar:(CDVInvokedUrlCommand*)command {
   NSDictionary* options = [command.arguments objectAtIndex:0];
-  NSString* calendarName = [options objectForKey:@"calendarName"];
+  // Fix viene el nombre como propiedad aunque mandes el id
+  NSString* calendarId = [options objectForKey:@"calendarName"];
 
   [self.commandDelegate runInBackground: ^{
-    EKCalendar *thisCalendar = [self findEKCalendar:calendarName];
+    // Asumiendo que tienes un método `findEKCalendarById` que hace la búsqueda por ID
+    EKCalendar *thisCalendar = [self findEKCalendarById:calendarId];
     CDVPluginResult* pluginResult = nil;
 
     if (thisCalendar == nil) {
@@ -1156,7 +1172,8 @@
       [eventStore removeCalendar:thisCalendar commit:YES error:&error];
 
       if (error) {
-        NSLog(@"Error in deleteCalendar: %@", error.localizedDescription);
+        NSLog(@"Error in deleteCalendarById: %@", error.localizedDescription);
+        // Cambiar el mensaje de error para reflejar el método actualizado
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.userInfo.description];
       } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
